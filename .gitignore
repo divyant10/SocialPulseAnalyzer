@@ -206,3 +206,4 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 "models/virality_model.pkl" 
+models/virality_model.pkl 
