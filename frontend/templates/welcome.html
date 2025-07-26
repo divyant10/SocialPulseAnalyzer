@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="5;url={{ url_for('main') }}">
+  <title>Welcome – Social Pulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fade-in 1s ease-out;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-violet-100 to-blue-100 text-gray-800 flex items-center justify-center min-h-screen px-4">
+
+  <div class="text-center max-w-xl animate-fade-in">
+    <h1 class="text-5xl font-extrabold text-violet-700 mb-6">📊 Welcome to Social Pulse</h1>
+    <p class="text-lg text-gray-700 mb-6">Your smart assistant for viral content insights</p>
+    <p class="text-sm text-gray-500 italic">Redirecting to the analyzer in 5 seconds...</p>
+  </div>
+
+</body>
+</html>

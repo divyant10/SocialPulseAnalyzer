@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Logged Out | Social Pulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-violet-100 to-blue-100 text-gray-800 flex items-center justify-center h-screen">
+
+  <div class="text-center px-4 animate-fade-in">
+    <!-- Lottie animation -->
+    <div id="lottie-logout" class="mx-auto w-48 h-48 mb-4"></div>
+
+    <h1 class="text-4xl font-extrabold mb-4 text-violet-700 animate-pulse">👋 You’ve been logged out</h1>
+    <p class="text-lg text-gray-700">Thanks for using Social Pulse!</p>
+    <p class="text-sm text-gray-500 mt-2 italic">You can login again below or close this tab.</p>
+
+    <!-- Login Again Button -->
+    <a href="{{ url_for('login') }}" class="inline-block mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-full transition">
+      🔐 Login Again
+    </a>
+  </div>
+
+  <!-- Lottie JSON Animation Script -->
+  <script>
+    const animationContainer = document.getElementById('lottie-logout');
+    lottie.loadAnimation({
+      container: animationContainer,
+      renderer: 'svg',
+      loop: false,
+      autoplay: true,
+      path: 'https://lottie.host/fda3a89c-7c79-41cc-a279-14b235116254/yTCYqUGi4u.json' // you can replace this link with your own animation URL
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+/* 📱 Platform Card Effects */
+.platform-card {
+  position: relative;
+  padding: 12px 18px;
+  border-radius: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: #ffffffcc;
+  backdrop-filter: blur(6px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.platform-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* 🌈 Platform Specific Glow */
+.instagram-glow {
+  border-left: 6px solid #e1306c;
+  background-image: linear-gradient(to right, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
+  color: #ffffff;
+}
+.x-glow {
+  border-left: 6px solid #000000;
+  background-color: #000000;
+  color: #ffffff;
+}
+.youtube-glow {
+  border-left: 6px solid #ff0000;
+  background-color: #ff0000;
+  color: #ffffff;
+}
+.facebook-glow {
+  border-left: 6px solid #3b5998;
+  background-color: #3b5998;
+  color: #ffffff;
+}
+
+/* 🎯 Key Elements Fade-in Upward */
+.fade-in-up {
+  animation: fadeInUp 0.7s ease-out both;
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 🌟 Highlight Key Info Boxes */
+.info-highlight {
+  border-radius: 10px;
+  background: #f9fafb;
+  padding: 10px 16px;
+  border-left: 4px solid #6366f1;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.info-highlight:hover {
+  background-color: #eef2ff;
+  transform: scale(1.02);
+}
+
+/* 🧿 Element Pulse */
+.pulse {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}

@@ -1,0 +1,34 @@
+{
+  "Good": [
+    "reelitfeelit",
+    "trendingreels",
+    "instagood",
+    "love",
+    "fitnessmotivation",
+    "travelgram",
+    "motivation",
+    "viralvideo",
+    "explorepage"
+  ],
+  "Average": [
+    "funny",
+    "selfie",
+    "cool",
+    "nature",
+    "throwback",
+    "photooftheday",
+    "instadaily",
+    "dailyvibes",
+    "weekendvibes"
+  ],
+  "Weak": [
+    "mycatinahat",
+    "boredlifemood",
+    "weirdhashtag",
+    "unknownmemeclub",
+    "randomstuffagain",
+    "beacissexy",
+    "mondayhatelife",
+    "dreamyfrogszn"
+  ]
+}

@@ -1,0 +1,185 @@
+<div class="w-64 min-h-screen bg-white bg-opacity-70 backdrop-blur-sm p-5 shadow-lg flex flex-col justify-between">
+
+    <div>
+        <div class="mb-8 text-center">
+            <h2 class="text-2xl font-bold text-violet-700">📊 Social Pulse</h2>
+            <p class="text-sm text-gray-600 mt-1">Welcome, <strong>{{ session['user'].split('@')[0] }}</strong></p>
+        </div>
+
+        <nav class="space-y-3">
+            <a href="{{ url_for('dashboard') }}" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-violet-200 transition">🏠 Dashboard</a>
+            <a href="{{ url_for('main') }}" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-violet-200 transition">📤 New Analysis</a>
+            <a href="{{ url_for('summary') }}" class="block px-3 py-2 rounded-lg text-gray-700 hover:bg-violet-200 transition">📝 Summary</a> {# Added Summary Link #}
+        </nav>
+
+        <hr class="my-5 border-gray-300">
+
+        <h3 class="text-sm font-semibold text-gray-600 uppercase mb-2">📌 Your History</h3>
+        {# Ensure 'history' variable is passed from app.py to dashboard.html, and then to sidebar.html #}
+        {% if history %} 
+            <ul class="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar" id="history-list">
+                {% for item in history %}
+                    <li class="history-item flex justify-between items-center px-3 py-2 rounded-md bg-violet-100 text-sm text-gray-800 hover:bg-violet-200 transition duration-200 cursor-pointer
+                               {% if item.timestamp == analysis.timestamp %} border-2 border-violet-500 font-bold shadow-md {% endif %}"
+                               data-timestamp="{{ item.timestamp }}"
+                               data-caption="{{ item.caption | tojson }}" {# Use tojson for string data to pass properly #}
+                               data-likes="{{ item.likes }}"
+                               data-views="{{ item.views }}"
+                               data-hashtags="{{ item.top_hashtags | join(' ') | tojson }}"
+                               data-platform="{{ item.platform | tojson }}"
+                               data-subscribers="{{ item.subscribers | default(0) }}"
+                               data-channel_views="{{ item.channel_views | default(0) }}">
+                        
+                        {# Link to load history item onto dashboard #}
+                        <a href="{{ url_for('load_history_item', timestamp=item.timestamp) }}" class="truncate w-full flex-grow mr-2">
+                            <span class="font-semibold">{{ item.platform }}</span> - {{ item.virality_score }} 🔥
+                            <p class="text-xs text-gray-500 line-clamp-1">{{ item.caption[:25] }}{% if item.caption|length > 25 %}...{% endif %}</p>
+                        </a>
+                        
+                        {# Delete button (client-side handling) #}
+                        <button class="delete-history text-red-500 hover:text-red-700 ml-2" title="Delete" data-timestamp="{{ item.timestamp }}">
+                            🗑️
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-xs text-gray-500">No history found.</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-6">
+        <a href="{{ url_for('logout') }}" class="block w-full text-center bg-red-500 text-white py-2 rounded hover:bg-red-600 transition">
+            🚪 Logout
+        </a>
+    </div>
+</div>
+
+<style>
+/* For Webkit browsers (Chrome, Safari) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e0; /* light gray */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0; /* darker gray */
+}
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- Helper function for showing toast messages (copied from dashboard.html) ---
+        function showToast(message, isError = false) {
+            const toastContainer = document.getElementById('toast-container'); // Ensure dashboard.html has this container
+            if (!toastContainer) { // Fallback if container not found
+                alert(message);
+                return;
+            }
+            const toast = document.createElement("div");
+            toast.className = `px-4 py-2 rounded-lg shadow-md text-white text-sm transition-all duration-300 transform translate-x-full opacity-0 ${
+              isError ? "bg-red-500" : "bg-green-500"
+            } mb-2`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+              toast.classList.remove('translate-x-full', 'opacity-0');
+              toast.classList.add('translate-x-0', 'opacity-100');
+            }, 100);
+
+            setTimeout(() => {
+              toast.classList.remove('translate-x-0', 'opacity-100');
+              toast.classList.add('translate-x-full', 'opacity-0');
+              setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
+        // --- Handle delete history item ---
+        document.querySelectorAll(".delete-history").forEach(button => {
+            button.addEventListener("click", async (event) => {
+                event.preventDefault(); // Prevent default button action
+                event.stopPropagation(); // Stop propagation to parent 'history-item' div
+
+                const timestamp = button.dataset.timestamp; // Get timestamp from data attribute
+
+                if (!confirm("Are you sure you want to delete this analysis history item?")) {
+                    return; // User cancelled
+                }
+
+                try {
+                    const response = await fetch("{{ url_for('delete_history_item') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ timestamp: parseInt(timestamp) }),
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        button.closest('.history-item').remove(); // Remove from DOM
+                        showToast(result.message);
+                        
+                        // Handle update of current dashboard view if deleted item was active
+                        const currentAnalysisTimestamp = {{ analysis.timestamp | tojson | default(0) }}; // Ensure default value
+                        const historyLength = {{ history | length | tojson | default(0) }};
+
+                        if (currentAnalysisTimestamp === parseInt(timestamp)) {
+                            if (historyLength > 1) { // If other items exist, reload to show new top item
+                                location.reload();
+                            } else { // If no other items, redirect to main page
+                                window.location.href = "{{ url_for('main') }}";
+                            }
+                        }
+                    } else {
+                        showToast(result.message, true);
+                    }
+                } catch (error) {
+                    console.error('Error deleting history item:', error);
+                    showToast('An error occurred while deleting.', true);
+                }
+            });
+        });
+
+        // --- Handle pre-filling main form from history item click ---
+        document.querySelectorAll(".history-item").forEach(item => {
+            // Ensure not to re-attach if already done, or if it's the delete button itself
+            if (!item.dataset.hasClickListener) { // Prevent double-attaching
+                item.addEventListener("click", (event) => {
+                    // Only trigger if click is NOT on the delete button
+                    if (!event.target.closest('.delete-history')) {
+                        const data = {
+                            caption: item.dataset.caption ? JSON.parse(item.dataset.caption) : '',
+                            likes: item.dataset.likes || '',
+                            views: item.dataset.views || '',
+                            hashtags: item.dataset.hashtags ? JSON.parse(item.dataset.hashtags) : '',
+                            platform: item.dataset.platform ? JSON.parse(item.dataset.platform) : '',
+                            subscribers: item.dataset.subscribers || '',
+                            channel_views: item.dataset.channel_views || '',
+                            url: item.dataset.url || '' // If you ever add URL to history
+                        };
+                        localStorage.setItem('prefill_data', JSON.stringify(data));
+                        // No need to redirect to main, as app.py already handles loading history item
+                        // window.location.href = "{{ url_for('main') }}"; // This would go to main page.
+                        // The 'View Details' link already handles loading it to dashboard.
+                        // So, this click listener for prefilling is now secondary or can be removed if not redirecting to main.
+                        // If the user clicks the "View Details" link, the data is not passed to localStorage.
+                        // If they click the *card itself*, we can still prefill the form on main page.
+                    }
+                });
+                item.dataset.hasClickListener = 'true'; // Mark as having listener
+            }
+        });
+    });
+</script>

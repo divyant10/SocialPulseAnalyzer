@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>📊 Summary Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Add custom styles if needed */
+        .summary-content {
+            max-height: 70vh; /* Adjust as needed */
+            overflow-y: auto;
+            padding-right: 1rem; /* For scrollbar space */
+        }
+        /* Custom scrollbar for Webkit browsers */
+        .summary-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .summary-content::-webkit-scrollbar-track {
+            background: #f0f4f8; /* light-blue-100 equivalent */
+            border-radius: 10px;
+        }
+        .summary-content::-webkit-scrollbar-thumb {
+            background: #a78bfa; /* violet-300 equivalent */
+            border-radius: 10px;
+        }
+        .summary-content::-webkit-scrollbar-thumb:hover {
+            background: #8b5cf6; /* violet-500 equivalent */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-violet-100 to-blue-100 text-gray-800 flex justify-center items-center p-6">
+
+    <div class="w-full max-w-4xl bg-white/70 backdrop-blur-md p-8 rounded-2xl shadow-2xl border border-white/30 animate-fade-in text-center">
+        <h1 class="text-4xl font-extrabold mb-6 text-indigo-700">📝 Summary Report</h1>
+
+        <div class="summary-content text-left space-y-4 mb-8 text-lg text-gray-700">
+            {% if summary_points %}
+                <p class="mb-4">Here's a summary of your social media post analysis:</p>
+                <ul class="list-disc list-inside space-y-2">
+                    {% for point in summary_points %}
+                        <li>{{ point | safe }}</li> {# Use | safe to render any HTML (like bold) if present #}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No summary points available. Please try analyzing a post first.</p>
+            {% endif %}
+        </div>
+
+        <audio id="summaryAudio" src="{{ url_for('static', filename=audio) }}" preload="auto"></audio>
+
+        <p class="text-gray-600 text-sm mt-4">Click anywhere on this page to stop the voice summary.</p>
+        <p class="text-gray-600 text-sm">You will be redirected to the dashboard automatically in 1 minute.</p>
+        
+        <div class="mt-8">
+            <a href="{{ url_for('dashboard') }}" class="bg-indigo-600 text-white px-6 py-3 rounded-full hover:bg-indigo-700 transition duration-300 ease-in-out shadow-lg">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const summaryAudio = document.getElementById('summaryAudio');
+            const pageBody = document.body;
+            let redirectTimer;
+
+            // --- 1. Play audio automatically ---
+            if (summaryAudio && summaryAudio.src) {
+                summaryAudio.play().catch(e => console.error("Audio playback failed:", e));
+            }
+
+            // --- 2. Stop audio on click anywhere ---
+            pageBody.addEventListener('click', function() {
+                if (summaryAudio && !summaryAudio.paused) {
+                    summaryAudio.pause();
+                    summaryAudio.currentTime = 0; // Rewind to start
+                    console.log("Audio stopped by user click.");
+                }
+            });
+
+            // --- 3. Auto redirect after 1 minute ---
+            const REDIRECT_DELAY_MS = 60 * 1000; // 1 minute
+            redirectTimer = setTimeout(() => {
+                window.location.href = "{{ url_for('dashboard') }}";
+                console.log("Redirecting to dashboard after 1 minute.");
+            }, REDIRECT_DELAY_MS);
+
+            // Optional: Clear timer if user navigates away before 1 min,
+            // though Flask session handles state well.
+            window.addEventListener('beforeunload', function() {
+                clearTimeout(redirectTimer);
+            });
+        });
+    </script>
+</body>
+</html>
