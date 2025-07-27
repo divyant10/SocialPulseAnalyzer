@@ -6,24 +6,36 @@ from tts_summary import generate_tts_summary
 import os
 import time
 import re
+import gdown
+import zipfile
 
-
+# Setup: Ensure models directory exists by downloading from Google Drive if necessary
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip")
+MODEL_DIR_PATH = os.path.join(BASE_DIR, "models")
 
+if not os.path.exists(MODEL_DIR_PATH):
+    file_id = "1tCsj1O8_ptznbK0JpqSIrUPkGz1qySLd"  # Google Drive file ID
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", output=MODEL_ZIP_PATH, fuzzy=True)
+    with zipfile.ZipFile(MODEL_ZIP_PATH, "r") as zip_ref:
+        zip_ref.extractall(BASE_DIR)
+    print("[INFO] ✅ Model downloaded and extracted.")
+else:
+    print("[INFO] ✅ Model folder already exists.")
+
+
+# Flask App Configuration
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, 'frontend', 'templates'),
     static_folder=os.path.join(BASE_DIR, 'frontend', 'static')
 )
 
-
 app.secret_key = 'your_secret_key_here'
-
 
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
 
 users = {}
 
@@ -45,7 +57,7 @@ def _parse_input_string(input_str_val):
     return val
 
 
-
+# Routes
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -62,7 +74,7 @@ def login():
         if email in users and users[email] == password:
             session['user'] = email
             session.permanent = False
-            session['history'] = [] 
+            session['history'] = []
             return redirect(url_for('main'))
         else:
             return render_template('login.html', error="Invalid credentials.")
@@ -102,18 +114,15 @@ def analyze():
     views = _parse_input_string(views_input_str)
     subscribers = _parse_input_string(subscribers_input_str)
     channel_views = _parse_input_string(channel_views_input_str)
-    
+
     print(f"DEBUG: app.py parsed values: likes={likes}, views={views}, subs={subscribers}, ch_views={channel_views}")
 
-    
     virality_score = int(predict_virality(caption, likes, views, hashtags, platform, subscribers, channel_views))
     sentiment_data = analyze_sentiment_distribution(caption)
     caption_results = get_caption_suggestions(caption)
     hashtag_tips = analyze_hashtag_effectiveness(hashtags)
     top_hashtags = [tag.strip() for tag in hashtags.split() if tag.strip().startswith('#')]
-   
 
-   
     history_item_minimal = {
         "timestamp": int(time.time()),
         "datetime": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
@@ -123,13 +132,12 @@ def analyze():
         "virality_score": virality_score,
         "platform": platform,
         "subscribers": subscribers,
-        "channel_views": channel_views, 
-        "hashtags_raw": hashtags 
+        "channel_views": channel_views,
+        "hashtags_raw": hashtags
     }
 
-    
     full_analysis_data = {
-        **history_item_minimal, 
+        **history_item_minimal,
         "sentiment": sentiment_data.get('overall_sentiment', 'Neutral'),
         "top_hashtags": top_hashtags,
         "hashtag_tips": hashtag_tips,
@@ -139,16 +147,13 @@ def analyze():
 
     if 'history' not in session:
         session['history'] = []
-    
-    session['history'].insert(0, history_item_minimal) 
-    session['history'] = session['history'][:20] 
+    session['history'].insert(0, history_item_minimal)
+    session['history'] = session['history'][:20]
 
-    
     tts_summary_output = generate_tts_summary(full_analysis_data)
     session['summary_audio'] = tts_summary_output['audio_path']
     session['summary_points'] = tts_summary_output['summary_points']
-
-    session['current_analysis'] = full_analysis_data 
+    session['current_analysis'] = full_analysis_data
 
     return redirect(url_for('dashboard'))
 
@@ -156,21 +161,15 @@ def analyze():
 def dashboard():
     if 'user' not in session:
         return redirect(url_for('login'))
-    
+
     current_analysis = session.get('current_analysis', None)
     history = session.get('history', [])
 
-    
-    
     if not current_analysis and history:
-        
         temp_analysis_data = history[0]
-        
         sentiment_data = analyze_sentiment_distribution(temp_analysis_data['caption'])
-        
-        hashtag_tips = analyze_hashtag_effectiveness(temp_analysis_data.get('hashtags_raw', '')) 
+        hashtag_tips = analyze_hashtag_effectiveness(temp_analysis_data.get('hashtags_raw', ''))
         top_hashtags = [tag.strip() for tag in temp_analysis_data.get('hashtags_raw', '').split() if tag.strip().startswith('#')]
-        
         caption_results = get_caption_suggestions(temp_analysis_data['caption'])
 
         full_temp_analysis = {
@@ -191,26 +190,18 @@ def dashboard():
                            analysis=current_analysis,
                            history=history)
 
-
 @app.route('/load_history_item/<int:timestamp>')
 def load_history_item(timestamp):
     if 'user' not in session or 'history' not in session:
         return redirect(url_for('login'))
 
-    found_item_minimal = None
-    for item in session['history']:
-        if item['timestamp'] == timestamp:
-            found_item_minimal = item
-            break
-    
+    found_item_minimal = next((item for item in session['history'] if item['timestamp'] == timestamp), None)
+
     if found_item_minimal:
-        
         sentiment_data = analyze_sentiment_distribution(found_item_minimal['caption'])
         caption_results = get_caption_suggestions(found_item_minimal['caption'])
-        
-        hashtag_tips = analyze_hashtag_effectiveness(found_item_minimal.get('hashtags_raw', '')) 
+        hashtag_tips = analyze_hashtag_effectiveness(found_item_minimal.get('hashtags_raw', ''))
         top_hashtags = [tag.strip() for tag in found_item_minimal.get('hashtags_raw', '').split() if tag.strip().startswith('#')]
-        
 
         full_analysis_for_display = {
             **found_item_minimal,
@@ -222,9 +213,8 @@ def load_history_item(timestamp):
         }
         session['current_analysis'] = full_analysis_for_display
         return redirect(url_for('dashboard'))
-    
-    return redirect(url_for('dashboard')) 
 
+    return redirect(url_for('dashboard'))
 
 @app.route('/delete_history_item', methods=['POST'])
 def delete_history_item():
@@ -240,16 +230,14 @@ def delete_history_item():
     original_length = len(session['history'])
     session['history'] = [item for item in session['history'] if item['timestamp'] != timestamp_to_delete]
 
-    if len(session['history']) < original_length: 
+    if len(session['history']) < original_length:
         if session.get('current_analysis', {}).get('timestamp') == timestamp_to_delete:
             if session['history']:
                 new_top_item_minimal = session['history'][0]
                 sentiment_data = analyze_sentiment_distribution(new_top_item_minimal['caption'])
                 caption_results = get_caption_suggestions(new_top_item_minimal['caption'])
-                
                 hashtag_tips = analyze_hashtag_effectiveness(new_top_item_minimal.get('hashtags_raw', ''))
                 top_hashtags = [tag.strip() for tag in new_top_item_minimal.get('hashtags_raw', '').split() if tag.strip().startswith('#')]
-                
 
                 full_new_top_analysis = {
                     **new_top_item_minimal,
@@ -261,17 +249,16 @@ def delete_history_item():
                 }
                 session['current_analysis'] = full_new_top_analysis
             else:
-                session['current_analysis'] = None 
+                session['current_analysis'] = None
         return jsonify({"success": True, "message": "History item deleted."})
     else:
         return jsonify({"success": False, "message": "History item not found."})
-
 
 @app.route('/summary')
 def summary():
     if 'user' not in session:
         return redirect(url_for('login'))
-    
+
     current_analysis = session.get('current_analysis', None)
     summary_audio = session.get('summary_audio', None)
     summary_points = session.get('summary_points', [])
@@ -288,8 +275,6 @@ def summary():
 def logout():
     session.clear()
     return redirect(url_for('login'))
-
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=8001)
