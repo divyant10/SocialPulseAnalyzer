@@ -11,6 +11,7 @@ import zipfile
 import gdown
 import nltk
 
+
 # --- Base Directories Configuration ---
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
@@ -25,6 +26,7 @@ MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip")
 # --- NLTK Data Configuration (if needed) ---
 NLTK_DATA_DIR = os.path.join('/tmp', 'nltk_data')
 
+
 # --- Global Model Variables (will be loaded by the init function) ---
 model = None
 scaler = None
@@ -35,8 +37,9 @@ EXPECTED_PLATFORMS = ['YouTube', 'Facebook', 'Instagram', 'X']
 TRENDING_HASHTAGS = [
     "#trending", "#viral", "#reels", "#explore", "#instagood",
     "#socialmedia", "#influencer", "#contentcreator", "#marketing", "#growth",
-    "#fyp", "#foryou", "#discover", "#instadaily", "#photooftday"
+    "#fyp", "#foryou", "#discover", "#instadaily", "#photooftheday"
 ]
+
 
 # --- Function to Download and Extract Models ---
 def download_and_extract_models():
@@ -46,7 +49,7 @@ def download_and_extract_models():
     """
     if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH) and os.path.exists(OHE_PATH):
         print("INFO: Model files already exist. Skipping download and extraction.")
-        return True # Indicate success
+        return True
 
     os.makedirs(MODELS_DIR, exist_ok=True)
 
@@ -56,7 +59,7 @@ def download_and_extract_models():
         print(f"✅ Download complete: {MODEL_ZIP_PATH}")
     except Exception as e:
         print(f"❌ ERROR: Failed to download model zip: {e}")
-        return False # Indicate failure
+        return False
 
     print(f"📦 Extracting models.zip to {MODELS_DIR}...")
     try:
@@ -65,7 +68,7 @@ def download_and_extract_models():
         print("✅ Model files extracted.")
     except Exception as e:
         print(f"❌ ERROR: Failed to extract models.zip: {e}")
-        return False # Indicate failure
+        return False
 
     try:
         os.remove(MODEL_ZIP_PATH)
@@ -73,7 +76,7 @@ def download_and_extract_models():
     except Exception as e:
         print(f"⚠️ WARNING: Could not remove models.zip: {e}")
     
-    return True # Indicate success
+    return True
 
 # --- NLTK Data Download Function ---
 def download_nltk_data():
@@ -97,7 +100,7 @@ def download_nltk_data():
     except Exception as e:
         print(f"❌ ERROR: Failed to download NLTK data: {e}")
 
-# --- NEW: Function to Initialize/Load All Models and Data ---
+# --- Function to Initialize/Load All Models and Data ---
 def initialize_models_and_data():
     """
     This function will be called explicitly by app.py after startup.
@@ -114,16 +117,19 @@ def initialize_models_and_data():
     try:
         model = joblib.load(MODEL_PATH)
         print(f"✅ Loaded main model from {MODEL_PATH}")
+        print(f"DEBUG: Type of loaded model: {type(model)}") # NEW DEBUG
 
         if os.path.exists(SCALER_PATH):
             scaler = joblib.load(SCALER_PATH)
             print(f"✅ Loaded scaler from {SCALER_PATH}")
+            print(f"DEBUG: Type of loaded scaler: {type(scaler)}") # NEW DEBUG
         else:
             print(f"⚠️ Scaler not found at {SCALER_PATH}. Prediction might fail without it.")
 
         if os.path.exists(OHE_PATH):
             one_hot_encoder = joblib.load(OHE_PATH)
             print(f"✅ Loaded OneHotEncoder from {OHE_PATH}")
+            print(f"DEBUG: Type of loaded OHE: {type(one_hot_encoder)}") # NEW DEBUG
         else:
             print(f"⚠️ OneHotEncoder not found at {OHE_PATH}. Prediction might fail without it.")
 
@@ -132,27 +138,9 @@ def initialize_models_and_data():
 
     except Exception as e:
         print(f"❌ FATAL ERROR: Unable to load all required model components after extraction: {e}")
-        raise # Re-raise to make Render deployment fail if models are truly missing/unusable
+        raise
 
-# --- REMOVED: The old top-level loading block ---
-# This block was removed to prevent race conditions during import.
-# try:
-#     if not os.path.exists(MODEL_PATH):
-#         download_and_extract_models()
-#     model = joblib.load(MODEL_PATH)
-#     if os.path.exists(SCALER_PATH):
-#         scaler = joblib.load(SCALER_PATH)
-#     else:
-#         print(f"⚠️ Scaler not found at {SCALER_PATH}")
-#     if os.path.exists(OHE_PATH):
-#         one_hot_encoder = joblib.load(OHE_PATH)
-#     else:
-#         print(f"⚠️ OneHotEncoder not found at {OHE_PATH}")
-# except Exception as e:
-#     print(f"❌ Error loading model or dependencies: {e}")
-
-
-# --- Your Existing Utility Functions (No changes needed here) ---
+# --- Utility Functions ---
 
 def parse_count(value):
     value = str(value).strip().upper()
@@ -208,9 +196,16 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
                  raise RuntimeError("Models still not loaded after re-initialization attempt.")
         except Exception as e:
             print(f"❌ CRITICAL: Failed to load models for prediction: {e}")
-            return 0 # Return 0 or raise a more specific error
+            return 0
 
     try:
+        # --- NEW DEBUGGING PRINTS FOR INPUTS AND TRANSFORMATIONS ---
+        print(f"DEBUG: Predict - Caption length: {len(caption.split())}")
+        print(f"DEBUG: Predict - Engagement rate: {round(likes / max(likes + max(1, views), 1), 4)}")
+        print(f"DEBUG: Predict - Sentiment: {round(TextBlob(caption).sentiment.polarity, 3)}")
+        print(f"DEBUG: Predict - Hashtag count: {len([tag for tag in hashtags.split() if tag.startswith('#')])}")
+        print(f"DEBUG: Predict - Platform raw: '{platform}'")
+
         engagement_rate = round(likes / max(likes + max(1, views), 1), 4)
         sentiment = round(TextBlob(caption).sentiment.polarity, 3)
         hashtag_count = len([tag for tag in hashtags.split() if tag.startswith('#')])
@@ -219,18 +214,30 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
             len(caption.split()), engagement_rate, sentiment, len(caption),
             likes, views, hashtag_count, subscribers, channel_views
         ]])
+        print(f"DEBUG: Predict - Numerical input to scaler: {numerical}") # NEW DEBUG
+
         scaled = scaler.transform(numerical)
+        print(f"DEBUG: Predict - Scaled numerical features: {scaled}") # NEW DEBUG
 
         platform_clean = platform.strip().replace(' (Twitter)', '').strip()
         platform_encoded = one_hot_encoder.transform([[platform_clean]])
         if hasattr(platform_encoded, 'toarray'):
             platform_encoded = platform_encoded.toarray()
+        print(f"DEBUG: Predict - Encoded platform features: {platform_encoded}") # NEW DEBUG
 
         input_features = np.hstack((scaled, platform_encoded))
+        print(f"DEBUG: Predict - Final input features to model: {input_features}") # NEW DEBUG
 
         raw_score = model.predict(input_features)[0]
+        print(f"DEBUG: Predict - Raw model prediction: {raw_score}") # NEW DEBUG
+
         scaled_score = scale_virality_score(raw_score)
-        return adjust_score_heuristically(scaled_score, caption, hashtags)
+        print(f"DEBUG: Predict - Scaled score (0-100): {scaled_score}") # NEW DEBUG
+
+        final_score = adjust_score_heuristically(scaled_score, caption, hashtags)
+        print(f"DEBUG: Predict - Final adjusted score: {final_score}") # NEW DEBUG
+        
+        return final_score
 
     except Exception as e:
         print(f"❌ Error in predict_virality: {e}")
@@ -240,13 +247,11 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
 
 
 def analyze_sentiment_distribution(text):
-    # Check if NLTK data is loaded for TextBlob
-    # This might be redundant if initialize_models_and_data handles it, but good as a fallback
     try:
         nltk.data.find('tokenizers/punkt', paths=[NLTK_DATA_DIR])
     except LookupError:
         print("DEBUG: NLTK data not found for TextBlob. Attempting to download...")
-        download_nltk_data() # Try to download if missing
+        download_nltk_data()
 
     blob = TextBlob(text)
     polarity = blob.sentiment.polarity
