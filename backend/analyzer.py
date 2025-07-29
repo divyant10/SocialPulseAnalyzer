@@ -3,97 +3,77 @@ import re
 import os
 import numpy as np
 from textblob import TextBlob
-import matplotlib.pyplot as plt # Keep if you are generating and serving charts
+import matplotlib.pyplot as plt
 from uuid import uuid4
 import pandas as pd
 import random
 import zipfile
-# import requests # <<< REMOVED: Replaced by gdown for Google Drive downloads
-import gdown # <<< ADDED: For reliable Google Drive downloads
-import nltk # Assuming you use NLTK for something, otherwise can remove related parts
-
+import gdown
+import nltk
 
 # --- Base Directories Configuration ---
-# BASE_DIR should point to the root of your SocialPulseAnalyzer project
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..')) # This correctly points to SocialPulseAnalyzer/
-
-# Directory where models are expected to be extracted (e.g., SocialPulseAnalyzer/models/)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 MODELS_DIR = os.path.join(BASE_DIR, 'models')
-
-# Paths for individual model components
 MODEL_PATH = os.path.join(MODELS_DIR, 'virality_model.pkl')
 SCALER_PATH = os.path.join(MODELS_DIR, 'scaler.pkl')
 OHE_PATH = os.path.join(MODELS_DIR, 'one_hot_encoder.pkl')
 
 # --- Google Drive Model Download Configuration ---
-# !! IMPORTANT !! Use the correct Google Drive File ID for your models.zip
-# This ID (1k2J7h4xGBdbN3DF9c01ylt8l_WJwvOOw) is from your analyzer.py
 GOOGLE_DRIVE_MODEL_ZIP_ID = "1k2J7h4xGBdbN3DF9c01ylt8l_WJwvOOw"
-# Temporary path for the downloaded zip file before extraction
-MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip") # Will download to SocialPulseAnalyzer/models.zip
+MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip")
 
 # --- NLTK Data Configuration (if needed) ---
-NLTK_DATA_DIR = os.path.join('/tmp', 'nltk_data') # NLTK data also goes into ephemeral storage
+NLTK_DATA_DIR = os.path.join('/tmp', 'nltk_data')
 
-
-# --- Global Model Variables (will be loaded at startup) ---
+# --- Global Model Variables (will be loaded by the init function) ---
 model = None
 scaler = None
 one_hot_encoder = None
 
 # --- Constants from your original analyzer.py ---
 EXPECTED_PLATFORMS = ['YouTube', 'Facebook', 'Instagram', 'X']
-
 TRENDING_HASHTAGS = [
     "#trending", "#viral", "#reels", "#explore", "#instagood",
     "#socialmedia", "#influencer", "#contentcreator", "#marketing", "#growth",
-    "#fyp", "#foryou", "#discover", "#instadaily", "#photooftheday"
+    "#fyp", "#foryou", "#discover", "#instadaily", "#photooftday"
 ]
 
-
-# --- Function to Download and Extract Models (Core of Free-Tier Strategy) ---
+# --- Function to Download and Extract Models ---
 def download_and_extract_models():
     """
     Downloads the model zip from Google Drive and extracts it.
     Checks if model files already exist to avoid redundant downloads.
     """
-    # Check if the main model file already exists. If yes, assume other components are also there.
-    # This prevents re-downloading on container restarts that don't clear /tmp.
     if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH) and os.path.exists(OHE_PATH):
         print("INFO: Model files already exist. Skipping download and extraction.")
-        return
+        return True # Indicate success
 
-    # Ensure the directory for extracted models exists (e.g., SocialPulseAnalyzer/models/)
     os.makedirs(MODELS_DIR, exist_ok=True)
 
     print("🔽 Downloading model zip from Google Drive using gdown...")
     try:
-        # Use gdown for more reliable Google Drive downloads for large files
         gdown.download(id=GOOGLE_DRIVE_MODEL_ZIP_ID, output=MODEL_ZIP_PATH, quiet=False)
         print(f"✅ Download complete: {MODEL_ZIP_PATH}")
     except Exception as e:
         print(f"❌ ERROR: Failed to download model zip: {e}")
-        # Re-raise the exception to prevent the application from starting without the model
-        raise
+        return False # Indicate failure
 
     print(f"📦 Extracting models.zip to {MODELS_DIR}...")
     try:
         with zipfile.ZipFile(MODEL_ZIP_PATH, 'r') as zip_ref:
-            # Extract all contents of the zip file into MODELS_DIR
             zip_ref.extractall(MODELS_DIR)
         print("✅ Model files extracted.")
     except Exception as e:
         print(f"❌ ERROR: Failed to extract models.zip: {e}")
-        # Re-raise the exception if extraction fails
-        raise
+        return False # Indicate failure
 
-    # Clean up the downloaded zip file to save ephemeral disk space
     try:
         os.remove(MODEL_ZIP_PATH)
         print(f"🧹 Cleaned up models.zip from {MODEL_ZIP_PATH}.")
     except Exception as e:
-        # This is a warning, not critical if cleanup fails
         print(f"⚠️ WARNING: Could not remove models.zip: {e}")
+    
+    return True # Indicate success
 
 # --- NLTK Data Download Function ---
 def download_nltk_data():
@@ -101,13 +81,9 @@ def download_nltk_data():
     Downloads NLTK data required by TextBlob if not already present.
     """
     try:
-        # Create the NLTK data directory if it doesn't exist
         os.makedirs(NLTK_DATA_DIR, exist_ok=True)
-        # Add this path to NLTK's data search paths
         nltk.data.path.append(NLTK_DATA_DIR)
 
-        # Check if 'punkt' tokenizer data is needed for TextBlob (common dependency)
-        # You might need to add other NLTK datasets here if your TextBlob usage requires them
         try:
             nltk.data.find('tokenizers/punkt', paths=[NLTK_DATA_DIR])
             print("INFO: NLTK 'punkt' data already exists.")
@@ -120,39 +96,63 @@ def download_nltk_data():
         print("WARNING: NLTK not installed or not used. Skipping NLTK data download.")
     except Exception as e:
         print(f"❌ ERROR: Failed to download NLTK data: {e}")
-        # Decide if this is critical for your app's functionality
 
-# --- Initial Model Loading Block ---
-# This block runs once when analyzer.py is imported (i.e., when your Flask app starts)
-try:
-    # First, download and extract the models
-    download_and_extract_models()
+# --- NEW: Function to Initialize/Load All Models and Data ---
+def initialize_models_and_data():
+    """
+    This function will be called explicitly by app.py after startup.
+    It ensures models are downloaded/extracted before attempting to load them.
+    """
+    global model, scaler, one_hot_encoder # Declare global to modify them
 
-    # Then, load the scikit-learn model components
-    model = joblib.load(MODEL_PATH)
-    print(f"✅ Loaded main model from {MODEL_PATH}")
+    # Attempt to download and extract models
+    if not download_and_extract_models():
+        print("❌ FATAL ERROR: Model download/extraction failed. Application cannot start.")
+        raise RuntimeError("Model download/extraction failed.")
 
-    if os.path.exists(SCALER_PATH):
-        scaler = joblib.load(SCALER_PATH)
-        print(f"✅ Loaded scaler from {SCALER_PATH}")
-    else:
-        print(f"⚠️ Scaler not found at {SCALER_PATH}. Prediction might fail without it.")
+    # Now, attempt to load the models
+    try:
+        model = joblib.load(MODEL_PATH)
+        print(f"✅ Loaded main model from {MODEL_PATH}")
 
-    if os.path.exists(OHE_PATH):
-        one_hot_encoder = joblib.load(OHE_PATH)
-        print(f"✅ Loaded OneHotEncoder from {OHE_PATH}")
-    else:
-        print(f"⚠️ OneHotEncoder not found at {OHE_PATH}. Prediction might fail without it.")
+        if os.path.exists(SCALER_PATH):
+            scaler = joblib.load(SCALER_PATH)
+            print(f"✅ Loaded scaler from {SCALER_PATH}")
+        else:
+            print(f"⚠️ Scaler not found at {SCALER_PATH}. Prediction might fail without it.")
 
-    # Download NLTK data
-    download_nltk_data()
+        if os.path.exists(OHE_PATH):
+            one_hot_encoder = joblib.load(OHE_PATH)
+            print(f"✅ Loaded OneHotEncoder from {OHE_PATH}")
+        else:
+            print(f"⚠️ OneHotEncoder not found at {OHE_PATH}. Prediction might fail without it.")
 
-except Exception as e:
-    # This fatal error will cause Render deployment to fail, which is desired if models are missing
-    print(f"❌ FATAL ERROR: Unable to initialize application due to missing/corrupt model components: {e}")
-    raise # Re-raise the exception to signal a critical failure
+        # Download NLTK data after models are ready
+        download_nltk_data()
 
-# --- Your Existing Utility Functions ---
+    except Exception as e:
+        print(f"❌ FATAL ERROR: Unable to load all required model components after extraction: {e}")
+        raise # Re-raise to make Render deployment fail if models are truly missing/unusable
+
+# --- REMOVED: The old top-level loading block ---
+# This block was removed to prevent race conditions during import.
+# try:
+#     if not os.path.exists(MODEL_PATH):
+#         download_and_extract_models()
+#     model = joblib.load(MODEL_PATH)
+#     if os.path.exists(SCALER_PATH):
+#         scaler = joblib.load(SCALER_PATH)
+#     else:
+#         print(f"⚠️ Scaler not found at {SCALER_PATH}")
+#     if os.path.exists(OHE_PATH):
+#         one_hot_encoder = joblib.load(OHE_PATH)
+#     else:
+#         print(f"⚠️ OneHotEncoder not found at {OHE_PATH}")
+# except Exception as e:
+#     print(f"❌ Error loading model or dependencies: {e}")
+
+
+# --- Your Existing Utility Functions (No changes needed here) ---
 
 def parse_count(value):
     value = str(value).strip().upper()
@@ -199,9 +199,16 @@ def adjust_score_heuristically(score, caption, hashtags):
 def predict_virality(caption, likes, views, hashtags, platform, subscribers, channel_views):
     print(f"DEBUG: predict_virality input: likes={likes}, views={views}, subscribers={subscribers}, channel_views={channel_views}")
     
+    # Check if models are loaded. This check is crucial now.
     if not all([model, scaler, one_hot_encoder]):
-        print("❌ Missing model/scaler/encoder. Cannot predict virality.")
-        return 0 # Or raise an error if this state indicates a critical failure
+        print("❌ Missing model/scaler/encoder. Cannot predict virality. Attempting to re-initialize...")
+        try:
+            initialize_models_and_data() # Try to load them if not already loaded
+            if not all([model, scaler, one_hot_encoder]): # Check again after attempt
+                 raise RuntimeError("Models still not loaded after re-initialization attempt.")
+        except Exception as e:
+            print(f"❌ CRITICAL: Failed to load models for prediction: {e}")
+            return 0 # Return 0 or raise a more specific error
 
     try:
         engagement_rate = round(likes / max(likes + max(1, views), 1), 4)
@@ -216,7 +223,7 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
 
         platform_clean = platform.strip().replace(' (Twitter)', '').strip()
         platform_encoded = one_hot_encoder.transform([[platform_clean]])
-        if hasattr(platform_encoded, 'toarray'): # For sparse matrices from older OHE versions
+        if hasattr(platform_encoded, 'toarray'):
             platform_encoded = platform_encoded.toarray()
 
         input_features = np.hstack((scaled, platform_encoded))
@@ -228,11 +235,19 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
     except Exception as e:
         print(f"❌ Error in predict_virality: {e}")
         import traceback
-        traceback.print_exc() # Print full traceback for debugging
+        traceback.print_exc()
         return 0
 
 
 def analyze_sentiment_distribution(text):
+    # Check if NLTK data is loaded for TextBlob
+    # This might be redundant if initialize_models_and_data handles it, but good as a fallback
+    try:
+        nltk.data.find('tokenizers/punkt', paths=[NLTK_DATA_DIR])
+    except LookupError:
+        print("DEBUG: NLTK data not found for TextBlob. Attempting to download...")
+        download_nltk_data() # Try to download if missing
+
     blob = TextBlob(text)
     polarity = blob.sentiment.polarity
 
