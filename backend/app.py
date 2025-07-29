@@ -8,7 +8,8 @@ import re
 
 # Import your analysis functions using RELATIVE IMPORTS
 # This is crucial because app.py is part of the 'backend' package
-from .analyzer import predict_virality, analyze_sentiment_distribution
+# <<< IMPORTANT: ADDED initialize_models_and_data to this import line >>>
+from .analyzer import predict_virality, analyze_sentiment_distribution, initialize_models_and_data
 from .caption_suggester import get_caption_suggestions
 from .hashtag_effectiveness import analyze_hashtag_effectiveness
 from .tts_summary import generate_tts_summary
@@ -38,6 +39,21 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Simple in-memory user storage (for demonstration, not for production)
 users = {}
+
+# --- NEW CRITICAL BLOCK: Call Model Initialization Here ---
+# This ensures models are downloaded and loaded BEFORE Waitress starts serving requests.
+# This prevents the race condition where a request comes in before models are ready.
+print("INFO: Calling model and data initialization before app starts...")
+try:
+    initialize_models_and_data()
+    print("INFO: Model and data initialization complete.")
+except Exception as e:
+    print(f"❌ FATAL ERROR: Application failed to initialize models: {e}")
+    # If models can't load, the app can't function. Exit immediately.
+    import sys
+    sys.exit(1)
+# --- END NEW CRITICAL BLOCK ---
+
 
 def _parse_input_string(input_str_val):
     val = 0
