@@ -6,28 +6,12 @@ import re
 # import gdown
 # import zipfile
 
-# Import your analysis functions from analyzer.py
-from analyzer import predict_virality, analyze_sentiment_distribution
-
-# Import other modules
-# Assuming these are separate files in your backend/ directory
-from caption_suggester import get_caption_suggestions
-from hashtag_effectiveness import analyze_hashtag_effectiveness
-from tts_summary import generate_tts_summary
-
-
-# --- IMPORTANT: REMOVED REDUNDANT MODEL DOWNLOAD LOGIC ---
-# The model download and extraction logic was moved to analyzer.py
-# and is handled when analyzer.py is imported.
-# This block was removed:
-# if not os.path.exists(MODEL_DIR_PATH):
-#     file_id = "1tCsj1O8_ptznbK0JpqSIrUPkGz1qySLd"  # Google Drive file ID
-#     gdown.download(f"https://drive.google.com/uc?id={file_id}", output=MODEL_ZIP_PATH, fuzzy=True)
-#     with zipfile.ZipFile(MODEL_ZIP_PATH, "r") as zip_ref:
-#         zip_ref.extractall(BASE_DIR)
-#     print("[INFO] ✅ Model downloaded and extracted.")
-# else:
-#     print("[INFO] ✅ Model folder already exists.")
+# Import your analysis functions using RELATIVE IMPORTS
+# This is crucial because app.py is part of the 'backend' package
+from .analyzer import predict_virality, analyze_sentiment_distribution
+from .caption_suggester import get_caption_suggestions
+from .hashtag_effectiveness import analyze_hashtag_effectiveness
+from .tts_summary import generate_tts_summary
 
 
 # Flask App Configuration
@@ -45,7 +29,7 @@ app = Flask(
 app.secret_key = os.environ.get('SECRET_KEY', 'a_very_secret_and_random_key_for_dev')
 
 # Ensure debug mode is off in production
-# It's implicitly off when run with Gunicorn, but explicit control is good
+# It's implicitly off when run with Waitress, but explicit control is good
 app.debug = os.environ.get('FLASK_DEBUG') == '1' # Set FLASK_DEBUG=1 for local debug
 
 UPLOAD_FOLDER = os.path.join(app.static_folder, 'uploads')
@@ -292,6 +276,6 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# --- REMOVED: This block is for local development only. Gunicorn handles starting the app on Render. ---
+# --- REMOVED: This block is for local development only. Waitress handles starting the app on Render. ---
 # if __name__ == '__main__':
 #     app.run(debug=True, port=8001)
