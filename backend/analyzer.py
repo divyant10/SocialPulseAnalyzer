@@ -14,14 +14,20 @@ import nltk
 
 # --- Base Directories Configuration ---
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-MODELS_DIR = os.path.join(BASE_DIR, 'models')
+
+# <<< CRITICAL CHANGE HERE >>>
+# The zip extracts to BASE_DIR/models/ which then contains another 'models' folder.
+# So, the actual models are in BASE_DIR/models/models/
+MODELS_DIR_EXTRACTED_ROOT = os.path.join(BASE_DIR, 'models') # This is /opt/render/project/src/models
+MODELS_DIR = os.path.join(MODELS_DIR_EXTRACTED_ROOT, 'models') # <<< THIS IS THE CORRECT PATH TO YOUR PKL FILES
+
 MODEL_PATH = os.path.join(MODELS_DIR, 'virality_model.pkl')
 SCALER_PATH = os.path.join(MODELS_DIR, 'scaler.pkl')
 OHE_PATH = os.path.join(MODELS_DIR, 'one_hot_encoder.pkl')
 
 # --- Google Drive Model Download Configuration ---
 GOOGLE_DRIVE_MODEL_ZIP_ID = "1k2J7h4xGBdbN3DF9c01ylt8l_WJwvOOw"
-MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip")
+MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip") # This is /opt/render/project/src/models.zip
 
 # --- NLTK Data Configuration (if needed) ---
 NLTK_DATA_DIR = os.path.join('/tmp', 'nltk_data')
@@ -47,11 +53,13 @@ def download_and_extract_models():
     Downloads the model zip from Google Drive and extracts it.
     Checks if model files already exist to avoid redundant downloads.
     """
+    # Check if the main model file already exists in the FINAL expected location
     if os.path.exists(MODEL_PATH) and os.path.exists(SCALER_PATH) and os.path.exists(OHE_PATH):
         print("INFO: Model files already exist. Skipping download and extraction.")
         return True
 
-    os.makedirs(MODELS_DIR, exist_ok=True)
+    # Ensure the root extraction directory exists (e.g., /opt/render/project/src/models)
+    os.makedirs(MODELS_DIR_EXTRACTED_ROOT, exist_ok=True)
 
     print("🔽 Downloading model zip from Google Drive using gdown...")
     try:
@@ -61,31 +69,33 @@ def download_and_extract_models():
         print(f"❌ ERROR: Failed to download model zip: {e}")
         return False
 
-    print(f"📦 Extracting models.zip to {MODELS_DIR}...")
+    print(f"📦 Extracting models.zip to {MODELS_DIR_EXTRACTED_ROOT}...")
     try:
+        # Extract all contents of the zip file into MODELS_DIR_EXTRACTED_ROOT
         with zipfile.ZipFile(MODEL_ZIP_PATH, 'r') as zip_ref:
-            zip_ref.extractall(MODELS_DIR)
+            zip_ref.extractall(MODELS_DIR_EXTRACTED_ROOT)
         print("✅ Model files extracted.")
     except Exception as e:
         print(f"❌ ERROR: Failed to extract models.zip: {e}")
         return False
 
     # --- NEW DEBUGGING: Verify contents after extraction ---
-    print(f"DEBUG: Verifying contents of {MODELS_DIR} after extraction...")
+    # Now check the contents of the *expected final directory*
+    print(f"DEBUG: Verifying contents of {MODELS_DIR} (final model location) after extraction...")
     if os.path.exists(MODELS_DIR):
         extracted_files = os.listdir(MODELS_DIR)
         print(f"DEBUG: Files in {MODELS_DIR}: {extracted_files}")
         if 'virality_model.pkl' in extracted_files and \
            'scaler.pkl' in extracted_files and \
            'one_hot_encoder.pkl' in extracted_files:
-            print("DEBUG: All expected model files found in MODELS_DIR.")
+            print("DEBUG: All expected model files found in FINAL MODELS_DIR.")
         else:
-            print("❌ ERROR: Expected model files NOT found in MODELS_DIR after extraction.")
+            print("❌ ERROR: Expected model files NOT found in FINAL MODELS_DIR after extraction.")
             print(f"DEBUG: Contents: {extracted_files}")
-            return False # Indicate failure if files aren't as expected
+            return False
     else:
-        print(f"❌ ERROR: MODELS_DIR ({MODELS_DIR}) does not exist after extraction attempt.")
-        return False # Indicate failure if directory isn't there
+        print(f"❌ ERROR: FINAL MODELS_DIR ({MODELS_DIR}) does not exist after extraction attempt.")
+        return False
     # --- END NEW DEBUGGING ---
 
     try:
@@ -96,7 +106,7 @@ def download_and_extract_models():
     
     return True
 
-# --- NLTK Data Download Function ---
+# --- NLTK Data Download Function (unchanged) ---
 def download_nltk_data():
     """
     Downloads NLTK data required by TextBlob if not already present.
@@ -118,20 +128,14 @@ def download_nltk_data():
     except Exception as e:
         print(f"❌ ERROR: Failed to download NLTK data: {e}")
 
-# --- Function to Initialize/Load All Models and Data ---
+# --- Function to Initialize/Load All Models and Data (unchanged) ---
 def initialize_models_and_data():
-    """
-    This function will be called explicitly by app.py after startup.
-    It ensures models are downloaded/extracted before attempting to load them.
-    """
     global model, scaler, one_hot_encoder
 
-    # Attempt to download and extract models
     if not download_and_extract_models():
         print("❌ FATAL ERROR: Model download/extraction failed. Application cannot start.")
         raise RuntimeError("Model download/extraction failed.")
 
-    # Now, attempt to load the models
     try:
         model = joblib.load(MODEL_PATH)
         print(f"✅ Loaded main model from {MODEL_PATH}")
@@ -151,7 +155,6 @@ def initialize_models_and_data():
         else:
             print(f"⚠️ OneHotEncoder not found at {OHE_PATH}. Prediction might fail without it.")
 
-        # Download NLTK data after models are ready
         download_nltk_data()
 
     except Exception as e:
@@ -231,6 +234,7 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
             len(caption.split()), engagement_rate, sentiment, len(caption),
             likes, views, hashtag_count, subscribers, channel_views
         ]])
+        scaled = scaler.transform(numerical)
         print(f"DEBUG: Predict - Numerical input to scaler: {numerical}")
 
         scaled = scaler.transform(numerical)
