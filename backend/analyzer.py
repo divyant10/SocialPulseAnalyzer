@@ -70,6 +70,24 @@ def download_and_extract_models():
         print(f"❌ ERROR: Failed to extract models.zip: {e}")
         return False
 
+    # --- NEW DEBUGGING: Verify contents after extraction ---
+    print(f"DEBUG: Verifying contents of {MODELS_DIR} after extraction...")
+    if os.path.exists(MODELS_DIR):
+        extracted_files = os.listdir(MODELS_DIR)
+        print(f"DEBUG: Files in {MODELS_DIR}: {extracted_files}")
+        if 'virality_model.pkl' in extracted_files and \
+           'scaler.pkl' in extracted_files and \
+           'one_hot_encoder.pkl' in extracted_files:
+            print("DEBUG: All expected model files found in MODELS_DIR.")
+        else:
+            print("❌ ERROR: Expected model files NOT found in MODELS_DIR after extraction.")
+            print(f"DEBUG: Contents: {extracted_files}")
+            return False # Indicate failure if files aren't as expected
+    else:
+        print(f"❌ ERROR: MODELS_DIR ({MODELS_DIR}) does not exist after extraction attempt.")
+        return False # Indicate failure if directory isn't there
+    # --- END NEW DEBUGGING ---
+
     try:
         os.remove(MODEL_ZIP_PATH)
         print(f"🧹 Cleaned up models.zip from {MODEL_ZIP_PATH}.")
@@ -106,7 +124,7 @@ def initialize_models_and_data():
     This function will be called explicitly by app.py after startup.
     It ensures models are downloaded/extracted before attempting to load them.
     """
-    global model, scaler, one_hot_encoder # Declare global to modify them
+    global model, scaler, one_hot_encoder
 
     # Attempt to download and extract models
     if not download_and_extract_models():
@@ -117,19 +135,19 @@ def initialize_models_and_data():
     try:
         model = joblib.load(MODEL_PATH)
         print(f"✅ Loaded main model from {MODEL_PATH}")
-        print(f"DEBUG: Type of loaded model: {type(model)}") # NEW DEBUG
+        print(f"DEBUG: Type of loaded model: {type(model)}")
 
         if os.path.exists(SCALER_PATH):
             scaler = joblib.load(SCALER_PATH)
             print(f"✅ Loaded scaler from {SCALER_PATH}")
-            print(f"DEBUG: Type of loaded scaler: {type(scaler)}") # NEW DEBUG
+            print(f"DEBUG: Type of loaded scaler: {type(scaler)}")
         else:
             print(f"⚠️ Scaler not found at {SCALER_PATH}. Prediction might fail without it.")
 
         if os.path.exists(OHE_PATH):
             one_hot_encoder = joblib.load(OHE_PATH)
             print(f"✅ Loaded OneHotEncoder from {OHE_PATH}")
-            print(f"DEBUG: Type of loaded OHE: {type(one_hot_encoder)}") # NEW DEBUG
+            print(f"DEBUG: Type of loaded OHE: {type(one_hot_encoder)}")
         else:
             print(f"⚠️ OneHotEncoder not found at {OHE_PATH}. Prediction might fail without it.")
 
@@ -140,7 +158,8 @@ def initialize_models_and_data():
         print(f"❌ FATAL ERROR: Unable to load all required model components after extraction: {e}")
         raise
 
-# --- Utility Functions ---
+
+# --- Utility Functions (unchanged) ---
 
 def parse_count(value):
     value = str(value).strip().upper()
@@ -187,19 +206,17 @@ def adjust_score_heuristically(score, caption, hashtags):
 def predict_virality(caption, likes, views, hashtags, platform, subscribers, channel_views):
     print(f"DEBUG: predict_virality input: likes={likes}, views={views}, subscribers={subscribers}, channel_views={channel_views}")
     
-    # Check if models are loaded. This check is crucial now.
     if not all([model, scaler, one_hot_encoder]):
         print("❌ Missing model/scaler/encoder. Cannot predict virality. Attempting to re-initialize...")
         try:
-            initialize_models_and_data() # Try to load them if not already loaded
-            if not all([model, scaler, one_hot_encoder]): # Check again after attempt
+            initialize_models_and_data()
+            if not all([model, scaler, one_hot_encoder]):
                  raise RuntimeError("Models still not loaded after re-initialization attempt.")
         except Exception as e:
             print(f"❌ CRITICAL: Failed to load models for prediction: {e}")
             return 0
 
     try:
-        # --- NEW DEBUGGING PRINTS FOR INPUTS AND TRANSFORMATIONS ---
         print(f"DEBUG: Predict - Caption length: {len(caption.split())}")
         print(f"DEBUG: Predict - Engagement rate: {round(likes / max(likes + max(1, views), 1), 4)}")
         print(f"DEBUG: Predict - Sentiment: {round(TextBlob(caption).sentiment.polarity, 3)}")
@@ -214,28 +231,28 @@ def predict_virality(caption, likes, views, hashtags, platform, subscribers, cha
             len(caption.split()), engagement_rate, sentiment, len(caption),
             likes, views, hashtag_count, subscribers, channel_views
         ]])
-        print(f"DEBUG: Predict - Numerical input to scaler: {numerical}") # NEW DEBUG
+        print(f"DEBUG: Predict - Numerical input to scaler: {numerical}")
 
         scaled = scaler.transform(numerical)
-        print(f"DEBUG: Predict - Scaled numerical features: {scaled}") # NEW DEBUG
+        print(f"DEBUG: Predict - Scaled numerical features: {scaled}")
 
         platform_clean = platform.strip().replace(' (Twitter)', '').strip()
         platform_encoded = one_hot_encoder.transform([[platform_clean]])
         if hasattr(platform_encoded, 'toarray'):
             platform_encoded = platform_encoded.toarray()
-        print(f"DEBUG: Predict - Encoded platform features: {platform_encoded}") # NEW DEBUG
+        print(f"DEBUG: Predict - Encoded platform features: {platform_encoded}")
 
         input_features = np.hstack((scaled, platform_encoded))
-        print(f"DEBUG: Predict - Final input features to model: {input_features}") # NEW DEBUG
+        print(f"DEBUG: Predict - Final input features to model: {input_features}")
 
         raw_score = model.predict(input_features)[0]
-        print(f"DEBUG: Predict - Raw model prediction: {raw_score}") # NEW DEBUG
+        print(f"DEBUG: Predict - Raw model prediction: {raw_score}")
 
         scaled_score = scale_virality_score(raw_score)
-        print(f"DEBUG: Predict - Scaled score (0-100): {scaled_score}") # NEW DEBUG
+        print(f"DEBUG: Predict - Scaled score (0-100): {scaled_score}")
 
         final_score = adjust_score_heuristically(scaled_score, caption, hashtags)
-        print(f"DEBUG: Predict - Final adjusted score: {final_score}") # NEW DEBUG
+        print(f"DEBUG: Predict - Final adjusted score: {final_score}")
         
         return final_score
 
