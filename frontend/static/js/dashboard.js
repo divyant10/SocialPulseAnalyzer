@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  // ✅ VIRALITY SCORE GAUGE
   if (typeof Plotly !== "undefined") {
     const viralityChartDiv = document.getElementById("viralityChart");
 
@@ -18,8 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
             range: [0, 100],
             tickwidth: 1,
             tickcolor: "#999",
-            // You can optionally make tick labels smaller if they're still crowding
-            // tickfont: { size: 10 } // Uncomment and adjust if needed
           },
           bar: { color: "#f43f5e", thickness: 0.1 },
           bgcolor: "transparent",
@@ -34,11 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }];
 
       const layout = {
-        // --- MORE AGGRESSIVE MARGINS & SLIGHTLY LARGER CHART ---
-        width: 380, // Increased width
-        height: 300, // Increased height significantly for vertical labels
-        margin: { t: 60, b: 60, l: 60, r: 60 }, // Increased margins significantly
-        // --- END OF UPDATED SECTION ---
+        width: 380, 
+        height: 300, 
+        margin: { t: 60, b: 60, l: 60, r: 60 }, 
         paper_bgcolor: "transparent",
         font: { color: "#1f2937", family: "Arial" }
       };
@@ -51,8 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("Plotly library not loaded. Cannot render charts.");
   }
 
-
-  // ✅ SENTIMENT BAR CHART
   const sentimentChartDiv = document.getElementById("sentimentChart");
 
   if (sentimentChartDiv && typeof Plotly !== "undefined") {
@@ -70,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
           title: 'Sentiment Breakdown',
           xaxis: { title: 'Sentiment' },
           yaxis: { title: 'Score' },
-          margin: { t: 40, b: 40, l: 40, r: 40 }, // Keep these margins as they seemed okay
+          margin: { t: 40, b: 40, l: 40, r: 40 }, 
           paper_bgcolor: "rgba(0,0,0,0)",
           plot_bgcolor: "rgba(0,0,0,0)",
           font: { color: "#1f2937", family: "Arial" }
@@ -87,16 +80,12 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Plotly library not loaded. Cannot render charts.");
   }
 
-
-  // ✅ AUTO REDIRECT AFTER 30 SECONDS FROM SUMMARY PAGE
   if (window.location.pathname === "/summary") {
     setTimeout(() => {
       window.location.href = "/dashboard";
     }, 30000);
   }
 
-
-  // ✅ PLATFORM LOGO AND CARD GLOW
   const platformTextElement = document.getElementById("platformText");
   const platformIcon = document.getElementById("platformIcon");
   const platformGlow = document.getElementById("platformCard");
@@ -131,8 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
     platformGlow.classList.add(glowClass, "shadow-lg");
   }
 
-
-  // ✅ DELETE HISTORY ITEM + TOAST
   document.querySelectorAll(".delete-history").forEach((icon) => {
     icon.addEventListener("click", async (event) => {
       event.stopPropagation();
@@ -154,8 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-
-  // ✅ CLICKABLE HISTORY ITEM — REFILL FORM AND RE-ANALYZE
   document.querySelectorAll(".history-item.clickable").forEach((card) => {
     card.addEventListener("click", () => {
       const caption = card.getAttribute("data-caption");
@@ -175,8 +160,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-
-  // ✅ SMOOTH SCROLL TO VIRALITY SCORE
   const viralityChartContainer = document.getElementById("viralityChart");
   if (viralityChartContainer) {
     setTimeout(() => {
@@ -184,8 +167,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 500);
   }
 
-
-  // ✅ TOAST MESSAGE FUNCTION
   function showToast(message, isError = false) {
     const toast = document.createElement("div");
     toast.className = `fixed bottom-5 right-5 px-4 py-2 rounded-lg shadow-md text-white text-sm transition-all duration-300 z-50 ${

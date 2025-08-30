@@ -25,8 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("🔒 Password must be at least 6 characters long.");
         return;
       }
-
-      // Disable button on submit
       const button = signupForm.querySelector('button[type="submit"]');
       if (button) {
         button.disabled = true;

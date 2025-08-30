@@ -23,8 +23,6 @@
         ✅ Signup successful! Please login to continue.
       </div>
     {% endif %}
-
-    <!-- 🔒 Email/Password Signup Form -->
     <form method="POST" action="{{ url_for('signup') }}" class="space-y-4">
       <input type="email" name="email" class="w-full px-4 py-2 border rounded-md" placeholder="Email" required>
       <input type="password" name="password" class="w-full px-4 py-2 border rounded-md" placeholder="Password" required>

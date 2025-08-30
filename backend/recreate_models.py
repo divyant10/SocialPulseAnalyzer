@@ -1,5 +1,3 @@
-# D:\SocialPulseAnalyzer\backend\recreate_models.py
-
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -7,7 +5,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 import joblib
 import os
-from textblob import TextBlob # Make sure textblob is installed: pip install textblob
+from textblob import TextBlob 
 
 print("--- Starting Model and Scaler/Encoder Recreation ---")
 
@@ -24,12 +22,9 @@ OHE_PATH = os.path.join(MODELS_DIR, 'one_hot_encoder.pkl')
 
 TRAINING_DATA_CSV_PATH = os.path.join(DATA_DIR, 'mock_social_virality_dataset_extended.csv')
 
-# --- Define expected platform categories for consistent One-Hot Encoding ---
-EXPECTED_PLATFORMS = ['YouTube', 'Facebook', 'Instagram', 'X'] # Make sure this matches generate_new_data.py
-# --- End platform categories ---
 
+EXPECTED_PLATFORMS = ['YouTube', 'Facebook', 'Instagram', 'X'] 
 
-# === Helper functions for consistent feature derivation ===
 def parse_count_for_training_data(value):
     if pd.isna(value): return 0
     value = str(value).strip().upper()
@@ -41,7 +36,6 @@ def parse_count_for_training_data(value):
         return int(val)
     except ValueError: return 0
 
-# === End Helper functions ===
 
 try:
     if not os.path.exists(TRAINING_DATA_CSV_PATH):
@@ -50,10 +44,9 @@ try:
     df_train = pd.read_csv(TRAINING_DATA_CSV_PATH)
     print(f"Loaded training data from: {TRAINING_DATA_CSV_PATH} with shape: {df_train.shape}")
 
-    # --- Preprocessing: Unify 'platform' column first ---
+  
     df_train['platform'] = df_train['platform'].replace('X (Twitter)', 'X')
 
-    # --- Feature Engineering for Training Data (Matches analyzer.py's prediction features) ---
     df_train['likes_parsed'] = df_train['likes'].apply(parse_count_for_training_data)
     df_train['views_parsed'] = df_train['views'].apply(parse_count_for_training_data)
     df_train['views_for_calc'] = df_train['views_parsed'].apply(lambda x: max(1, x))
@@ -70,52 +63,44 @@ try:
         lambda x: len([tag for tag in str(x).split() if tag.startswith('#')]) if pd.notna(x) else 0
     )
 
-    # --- IMPORTANT: Include 'subscribers' and 'channel_views' in numerical_features if they exist in CSV ---
-    # Your generated CSV now includes these, so we use them.
-    # If they are NOT in your CSV, df_train.get() will return None for those columns,
-    # and the corresponding feature will be all zeros. You must ensure generate_new_data.py creates them.
-    df_train['subscribers'] = df_train.get('subscribers', 0) # Use .get() to avoid KeyError if column isn't there
-    df_train['channel_views'] = df_train.get('channel_views', 0) # Use .get()
+    df_train['subscribers'] = df_train.get('subscribers', 0) 
+    df_train['channel_views'] = df_train.get('channel_views', 0) 
 
-    # --- Define Numerical and Categorical Features for Separate Processing ---
     numerical_features = [
         'caption_length_derived', 'engagement_rate_derived', 'sentiment_score_derived',
         'total_chars_derived', 'likes_parsed', 'views_parsed', 'hashtag_count_derived',
-        'subscribers',        # NEW NUMERICAL FEATURE
-        'channel_views'       # NEW NUMERICAL FEATURE
+        'subscribers',        
+        'channel_views'       
     ]
     categorical_features = ['platform']
 
     X_train_numerical_raw = df_train[numerical_features].values
     X_train_categorical_raw = df_train[categorical_features].values
 
-    # --- Fit and Save the StandardScaler (for numerical features) ---
+    
     scaler = StandardScaler()
     scaler.fit(X_train_numerical_raw)
     joblib.dump(scaler, SCALER_PATH)
     print(f"\n✅ Scaler (scaler.pkl) created and saved successfully at: {SCALER_PATH}")
 
-    # --- Fit and Save the OneHotEncoder (for categorical features) ---
     ohe = OneHotEncoder(handle_unknown='ignore', sparse_output=False, categories=[EXPECTED_PLATFORMS])
     ohe.fit(X_train_categorical_raw)
     joblib.dump(ohe, OHE_PATH)
     print(f"✅ OneHotEncoder (one_hot_encoder.pkl) created and saved successfully at: {OHE_PATH}")
 
-    # --- Prepare X_train_processed for Model Fitting ---
+   
     X_train_numerical_scaled = scaler.transform(X_train_numerical_raw)
     X_train_categorical_encoded = ohe.transform(X_train_categorical_raw)
     
     X_train_processed = np.hstack((X_train_numerical_scaled, X_train_categorical_encoded))
 
-    y_train = df_train['virality_score'].values # Target variable
+    y_train = df_train['virality_score'].values 
 
     print(f"\nProcessed Features (X_train_processed) shape: {X_train_processed.shape}")
     print("First 5 rows of PROCESSED features (numerical scaled + categorical one-hot encoded):")
     print(X_train_processed[:5]) 
     print(f"Target (y_train) shape: {y_train.shape}")
 
-
-    # --- Retrain and Re-save your Virality Model ---
     try:
         model = joblib.load(MODEL_PATH)
         print(f"\nLoaded existing model for retraining: {type(model).__name__}")

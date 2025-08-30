@@ -26,7 +26,7 @@ SCALER_PATH = os.path.join(MODELS_DIR, 'scaler.pkl')
 OHE_PATH = os.path.join(MODELS_DIR, 'one_hot_encoder.pkl')
 
 # --- Google Drive Model Download Configuration ---
-GOOGLE_DRIVE_MODEL_ZIP_ID = "1k2J7h4xGBdbN3DF9c01ylt8l_WJwvOOw"
+GOOGLE_DRIVE_MODEL_ZIP_ID = "1xxLMwZ3MU8jOZFQF34onzUcZFfk9eruG"
 MODEL_ZIP_PATH = os.path.join(BASE_DIR, "models.zip") # This is /opt/render/project/src/models.zip
 
 # --- NLTK Data Configuration (if needed) ---

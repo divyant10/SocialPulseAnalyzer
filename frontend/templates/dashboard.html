@@ -8,7 +8,6 @@
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <style>
-    /* Add any custom CSS here if needed, or if Tailwind classes aren't enough */
   </style>
 </head>
 <body class="min-h-screen flex bg-gradient-to-br from-violet-100 to-blue-100 text-gray-800">
@@ -80,12 +79,11 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // --- Helper function for showing toast messages ---
-      window.showToast = function(message, isError = false) { // Made global
+      window.showToast = function(message, isError = false) { 
         const toastContainer = document.getElementById('toast-container');
         if (!toastContainer) {
             console.error('Toast container not found in dashboard.html');
-            alert(message); // Fallback
+            alert(message); 
             return;
         }
         const toast = document.createElement("div");
@@ -107,8 +105,6 @@
         }, 3000);
       };
 
-
-      // Virality Score Chart (Gauge)
       const viralityScore = {{ analysis.virality_score | default(0) }};
       Plotly.newPlot('viralityChart', [{
         type: "indicator",
@@ -142,7 +138,6 @@
         font: { color: "#1f2937", family: "Arial" }
       });
 
-      // Sentiment Analysis Chart (Bar Chart)
       {% if analysis.sentiment_graph_data and analysis.sentiment_graph_data.scores and analysis.sentiment_graph_data.labels %}
         const sentimentScores = {{ analysis.sentiment_graph_data.scores | tojson | safe }};
         const sentimentLabels = {{ analysis.sentiment_graph_data.labels | tojson | safe }};
@@ -152,12 +147,7 @@
           y: sentimentScores,
           type: 'bar',
           marker: {
-            // === FIX: Corrected order of colors to match labels ['Positive', 'Negative', 'Neutral'] ===
-            // Positive (Green): #22c55e
-            // Negative (Red):   #ef4444
-            // Neutral (Yellow): #facc15
             color: ['#22c55e', '#ef4444', '#facc15']
-            // === END FIX ===
           }
         }], {
           title: 'Sentiment Breakdown',
@@ -171,10 +161,6 @@
       {% else %}
         document.getElementById('sentimentChart').innerHTML = '<p class="text-center text-gray-500">No sentiment data available.</p>';
       {% endif %}
-
-      // History Interaction Script (This part remains in dashboard.html for now if not moved to external JS)
-      // The delete event listener is handled in sidebar.html's script block if that's included.
-      // This part ensures the toast function is available.
     });
   </script>
 </body>

@@ -1,9 +1,6 @@
-# user_utils.py
-
 from firebase_utils import save_user, get_user_history
 
-# Store sessions in memory (temporary, better to use Flask session or JWT later)
-user_sessions = {}  # Format: {session_id: user_id}
+user_sessions = {}  
 
 def login_user(username, email):
     """
