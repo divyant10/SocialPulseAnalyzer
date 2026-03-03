@@ -94,15 +94,16 @@ python backend/app.py
 Then open in browser:
 http://localhost:5000
 
+---
+
 ## 📂 Project Structure
 
-```
-backend/     # Flask backend & ML logic  
-frontend/    # UI components  
-models/      # Trained ML models  
-data/        # Sample datasets  
+```bash
+backend/        # Flask backend & ML logic
+frontend/       # UI components
+models/         # Trained ML models
+data/           # Sample datasets
 requirements.txt
-```
 
 ---
 
@@ -120,3 +121,5 @@ requirements.txt
 
 **Divyant Mayank**  
 Machine Learning | Data Analytics | Product-Focused Builder
+
+---
