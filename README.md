@@ -86,7 +86,6 @@ For creators managing 100+ posts monthly:
 
 ## 🧪 Run Locally
 
-```bash
 git clone https://github.com/divyant10/SocialPulseAnalyzer.git
 cd SocialPulseAnalyzer
 pip install -r requirements.txt
@@ -96,7 +95,6 @@ http://localhost:5000
 
 ## 📂 Project Structure
 
-```bash
 backend/        # Flask backend & ML logic
 frontend/       # UI components
 models/         # Trained ML models
