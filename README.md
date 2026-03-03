@@ -94,7 +94,7 @@ Then open in browser:
 http://localhost:5000
 
 ## 📂 Project Structure
-
+```bash
 backend/        # Flask backend & ML logic
 frontend/       # UI components
 models/         # Trained ML models
