@@ -94,8 +94,6 @@ python backend/app.py
 Then open in browser:
 http://localhost:5000
 
----
-
 ## 📂 Project Structure
 
 ```bash
@@ -104,8 +102,7 @@ frontend/       # UI components
 models/         # Trained ML models
 data/           # Sample datasets
 requirements.txt
-
----
+```
 
 ## 🔮 Future Enhancements
 
